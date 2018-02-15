@@ -58,7 +58,7 @@
 		Stat::setAuth($auth);
 		foreach($data as $key => $item)
 		{
-			if($key == 10)
+			if($key == 20)
 			{
 				break;
 			}
@@ -154,8 +154,10 @@
 			);
 		    $out = curl_exec($curl);
 
-			    
+			   $data['sources'][0]['json_add'] = $out; 
 			$out = json_decode($out);
+			
+
 
 			$responseScrup = scrupGet($data['sources'][0]);
 			
@@ -213,7 +215,7 @@
 					$data['latitude'] = '';
 					$data['longitude'] = '';
 				}
-					$data['terminalSerial'] = (int) 12800011;
+					$data['terminalSerial'] = (int) 11600011;
 					$data['note'] = '';
 			    curl_close($curl);
 			  }else{
@@ -232,10 +234,10 @@
 		{
 			if(strpos($region,'область') !== false){
 				$region = str_replace('область', '', $region);
-				$data = ['city' => $fullAddress[$key-1],'region' => $region];
+				$data = ['city' => trim($fullAddress[$key-1]),'region' => trim($region)];
 				break;
 			}else{
-				$data = ['city' => $fullAddress[1],'region' => $fullAddress[2]];
+				$data = ['city' => trim($fullAddress[1]),'region' => trim($fullAddress[2])];
 				
 			}
 			
@@ -365,7 +367,7 @@
 				}';
 
 			if( $curl = curl_init() ) {
-			    curl_setopt($curl, CURLOPT_URL, 'https://pgw.elpaysys.com/ts/terminal/source/getById');
+			    curl_setopt($curl, CURLOPT_URL, 'https://sandbox.elpaysys.com/ts/terminal/source/getById');
 			    curl_setopt($curl, CURLOPT_RETURNTRANSFER,true);
 			    curl_setopt($curl, CURLOPT_POST, true);
 			    curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
