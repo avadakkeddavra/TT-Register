@@ -300,7 +300,7 @@
 		$fp = fopen(__DIR__."/files/report.csv", 'a');
 			if($isEmpty == '')
 			{
-				$head = ['name','externalId','address','type','latitude','longitude','terminalSerial','note','id','json','region','city','validation','status','desc'];
+				$head = ['name','externalId','address','type','latitude','longitude','terminalSerial','note','json_add','id','json_get','region','city','validation','status','desc'];
 				fputcsv($fp, $head);
 			}
 
