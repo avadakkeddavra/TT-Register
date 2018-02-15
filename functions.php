@@ -81,8 +81,8 @@
 		 
 
 		    foreach( $_FILES as $file ){
-		        if( move_uploaded_file( $file['tmp_name'], $uploaddir . basename($file['name']) ) ){
-		            $files[] = realpath( $uploaddir . $file['name'] );
+		        if( move_uploaded_file( $file['tmp_name'], $uploaddir . basename('reestr.csv') ) ){
+		            $files[] = realpath( $uploaddir . 'reestr.csv' );
 		        }
 		        else{
 		            $error = true;
