@@ -58,11 +58,11 @@
 		Stat::setAuth($auth);
 		foreach($data as $key => $item)
 		{
-			if($key == 100)
+			if($key == 10)
 			{
-				googleApiRequest($item,$auth);
 				break;
 			}
+			googleApiRequest($item,$auth);
 			
 				
 		}
