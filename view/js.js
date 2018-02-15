@@ -38,9 +38,9 @@ $(document).ready(function(){
 		//
 		if(login != '', password != '' && apikey != ''){
 			$('.preloader').fadeIn();
-			$('#login').addClass('error');
-			$('#password').addClass('error');
-			$('#api_key').addClass('error');
+			$('#login').removeClass('error');
+			$('#password').removeClass('error');
+			$('#api_key').removeClass('error');
 			$.ajax({
 				url:'/',
 				data:{type:'start',login:login,password:password,api_key:apikey},

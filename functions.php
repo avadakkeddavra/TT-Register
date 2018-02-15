@@ -109,21 +109,21 @@
 		    $num = count($data);
 		    
 		    $row++;
-		    if($row > 2)
+		    if($row > 4)
 		    {
 		    	$params = [];
 		    	for ($c=0; $c < $num; $c++) {
 		        	$params[] = $data[$c];
 		    	}
 		    	
-		    	$arr[$row-3]['cityDesc']['city'] = $params[6];
+		    	$arr[$row-5]['cityDesc']['city'] = $params[6];
 
-		    	$arr[$row-3]['cityDesc']['region'] = $params[5];
-				$arr[$row-3]['name'] = trim($params[0]); 
-		    	$arr[$row-3]['externalId'] = trim($params[8]);
-		    	$arr[$row-3]['address'] = 'вул. '.str_replace('вул. ', '', $params[7]);
+		    	$arr[$row-5]['cityDesc']['region'] = $params[5];
+				$arr[$row-5]['name'] = trim($params[0]); 
+		    	$arr[$row-5]['externalId'] = trim($params[8]);
+		    	$arr[$row-5]['address'] = 'вул. '.str_replace('вул. ', '', $params[7]);
 
-		    	$arr[$row-3]['type'] = 0; 
+		    	$arr[$row-5]['type'] = 0; 
 		    			    	
 		    }
 		    
@@ -159,9 +159,14 @@
 
 			$responseScrup = scrupGet($data['sources'][0]);
 			
-			$data['sources'][0]['id'] = json_decode($responseScrup)->source->id;
+			if(json_decode($responseScrup)->respStauts == 0)
+			{
+				$data['sources'][0]['id'] = json_decode($responseScrup)->source->id;
+				
+			}else{
+				$data['sources'][0]['id'] = '';
+			}
 			$data['sources'][0]['json'] = $responseScrup;
-
 			writeReport($data['sources'][0],$out->respStatus);
 			
 		    curl_close($curl);
@@ -355,7 +360,7 @@
 				    "login": "'.Stat::getAuthByKey('login').'",
 				    "authCode": "'.md5(Stat::getAuthByKey('password')).'"
 				  },
-				  "externalId": "5559:WIN-Terminal",
+				  "externalId": "'.$data['externalId'].'",
 				  "terminalSerial": '.$data['terminalSerial'].'				  
 				}';
 
