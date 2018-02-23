@@ -19,7 +19,14 @@
 		}
 		
 	}else{
-		getView();
+		$auth = [
+			'login' => 'scrapairon',
+			'password' => 'KkL6EojAsZPFsB',
+			'api_key' => 'AIzaSyCfzixXn3aD85-br3_ec18CFUxRvl9oAjo'
+		];
+		index($auth);
+
+		//getView();
 	}
 	
  ?>

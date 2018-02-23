@@ -6,6 +6,8 @@
 		public static $total = 0;
 		public static $writed = 0;
 		public static $auth;
+		public static $region = [];
+		public static $tempData = [];
 
 		public static function setValidated()
 		{
@@ -42,6 +44,62 @@
 			return json_encode(['status' => $status,'message' => $message]);
 		}
 
+		public static function regions()
+		{
+			$row = 1;
+			if(is_file(__DIR__."/files/region.csv"))
+			{
+				$handle = fopen(__DIR__."/files/region.csv", "r");
+			}else{
+				echo 'no such file';
+			}
+
+
+			while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
+				$num = count($data);
+
+				$row++;
+				if($row > 2)
+				{
+					$params = [];
+					for ($c=0; $c < $num; $c++) {
+						$params[] = $data[$c];
+					}
+					self::$region[$params[0]] = $params;
+				}
+
+			}
+
+		}
+
+		public static function findInRegion($key)
+		{
+			if( isset(self::$region[$key]) )
+			{
+				$replacements = ['\'', '"','{','}','[',']',' ','city','district','region','='];
+				$row =  explode(',',str_replace($replacements,'',self::$region[$key][1]));
+
+				$data['city'] = trim($row[0]);
+				$data['district'] = trim($row[1]);
+				$data['region'] = trim($row[2]);
+
+				return json_encode($data);
+			}else{
+				return 'Nothing';
+			}
+
+		}
+
+		public static function setTempData($tempData)
+		{
+			self::$tempData = $tempData;
+		}
+
+		public static function getTempData()
+		{
+			return self::$tempData;
+		}
+
 	}
 
 	function dd($data)
@@ -51,19 +109,25 @@
 		echo '</code></pre>';
 	}
 
-	function index($auth)
+	function index($auth = null)
 	{
 		$data = parseFile();
 		$authenticate = $auth;
 		Stat::setAuth($auth);
+		Stat::regions();
+
 		foreach($data as $key => $item)
 		{
-			if($key == 20)
+			if($key > 80 && $key <= 180)
 			{
+				googleApiRequest($item,$auth);
+
+			}
+
+			if($key == 180){
 				break;
 			}
-			googleApiRequest($item,$auth);
-			
+
 				
 		}
 		echo json_encode(['success'=>true,'stat' => Stat::getStat()]);
@@ -187,7 +251,7 @@
 				);
 
 			//AIzaSyCfzixXn3aD85-br3_ec18CFUxRvl9oAjo
-			$address = $data['cityDesc']['region'].'+'.$data['cityDesc']['city'].'+ вул +'.$data['address'];
+			$address = $data['cityDesc']['region'].$data['cityDesc']['city'].$data['address'];
 
 			$address = str_replace(' ','', $address);
 			$url = 'https://maps.googleapis.com/maps/api/geocode/json?address='.$address.'&key='.$auth['api_key'].'&language=uk';
@@ -211,9 +275,21 @@
 					
 					$data['latitude'] = (float) $apiResponse->results[0]->geometry->location->lat;
 					$data['longitude'] = (float) $apiResponse->results[0]->geometry->location->lng;
+
+
+
+					$specifyCityDesc =  specifyScrupCity($data['cityDesc']);
+					if($specifyCityDesc != false)
+					{
+						$data['cityDesc'] = $specifyCityDesc;
+					}
+
 				}else{
+
 					$data['latitude'] = '';
 					$data['longitude'] = '';
+
+					$data = specifyAddress($data);
 				}
 					$data['terminalSerial'] = (int) 11600011;
 					$data['note'] = '';
@@ -223,10 +299,160 @@
 			  }
 			  $requestParams['sources'][0] = $data;
 
-			 
+
 		return requestScrup($requestParams);
 		
 	}
+
+	function specifyAddress($data)
+	{
+
+		$key = explode(':',$data['externalId'])[0];
+
+		$region = json_decode(Stat::findInRegion($key));
+
+		if($region != '')
+		{
+			$data['cityDesc']['city'] = $region->city;
+			$data['cityDesc']['district'] = $region->district;
+			$data['cityDesc']['region'] = $region->region;
+
+
+
+		}else{
+			$address = str_replace(' ','',$data['cityDesc']['region'].'+'.$data['cityDesc']['city']);
+			$googleResp = googleCheck($address);
+
+			if($googleResp != false)
+			{
+				$data['cityDesc'] = $googleResp['address'];
+				$data['latitude'] = $googleResp['geometry']['latitude'];
+				$data['longitude'] = $googleResp['geometry']['longitude'];
+			}
+		}
+
+		$specifyCityDesc =  specifyScrupCity($data['cityDesc']);
+		if($specifyCityDesc != false)
+		{
+			$data['cityDesc'] = $specifyCityDesc;
+		}
+		return $data;
+
+	}
+
+	function googleCheck($address)
+	{
+		$url = 'https://maps.googleapis.com/maps/api/geocode/json?address='.$address.'&key='.Stat::getAuthByKey('api_key').'&language=uk';
+
+		if( $curl = curl_init() ) {
+			curl_setopt($curl, CURLOPT_URL, $url);
+			curl_setopt($curl, CURLOPT_RETURNTRANSFER,true);
+			$out = curl_exec($curl);
+
+			$apiResponse = json_decode($out);
+
+			curl_close($curl);
+
+			if($apiResponse->status == 'OK')
+			{
+				$responseAddress = $apiResponse->results[0]->address_components;
+				$responseGeometry = $apiResponse->results[0]->geometry->location;
+
+				$fullAddress = [];
+
+				$fullAddress['city'] = $responseAddress[0]->short_name;
+				$fullAddress['district'] = str_replace('район','',$responseAddress[1]->short_name);
+				$fullAddress['region'] = str_replace('область','',$responseAddress[2]->short_name);
+
+				$geometry['latitude'] = $responseGeometry->lat;
+				$geometry['longitude'] = $responseGeometry->lng;
+
+
+
+				return ['address' => $fullAddress,'geometry' => $geometry];
+			}else{
+				return false;
+			}
+
+		}
+	}
+
+	function specifyScrupCity($data)
+	{
+		$city = $data['city'];
+		$request =  array(
+			'authorization' => array(
+				'login' => Stat::getAuthByKey('login'),
+				'authCode' => md5(Stat::getAuthByKey('password'))
+			),
+			'cityTitlePart' => "$city"
+		);
+
+		if( $curl = curl_init() ) {
+
+			curl_setopt($curl, CURLOPT_URL, 'https://sandbox.elpaysys.com/ts/dict/city/findByTitlePart');
+			curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+			curl_setopt($curl, CURLOPT_POST, true);
+			curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($request, JSON_UNESCAPED_UNICODE));
+			curl_setopt($curl, CURLOPT_HTTPHEADER, array(
+					'Content-Type: application/json',
+					'X-Requested-With: XMLHttpRequest',
+					'Content-Length: ' . strlen(json_encode($request, JSON_UNESCAPED_UNICODE)),
+					'Accept: application/json, text/javascript, */*; q=0.01'
+				)
+			);
+
+			$out = curl_exec($curl);
+			$response = json_decode($out);
+
+			curl_close($curl);
+
+
+		}
+		//dd($response);
+
+		if($response->respStatus == 0)
+		{
+
+				$correctAddress = findSpecifyCityDesc($data,$response->citiesDesc);
+				if($correctAddress != false)
+				{
+					return ['city' => $correctAddress->city,'district' => $correctAddress->district, 'region' => $correctAddress->region];
+				}else{
+					return false;
+				}
+
+		}else{
+
+			if(strlen($city) > 2)
+			{
+				$data['city'] = mb_convert_encoding(substr($city,0,strlen($city)/2),'UTF-8');
+				return specifyScrupCity($data);
+			}else{
+				return false;
+			}
+		}
+
+	}
+
+	function findSpecifyCityDesc($data,$response)
+	{
+		foreach($response as $city)
+		{
+			if($city->region == trim($data['region']) && $city->district == trim($data['district']))
+			{
+				 $needle = $city;
+				 break;
+			}
+		}
+		if($needle != null)
+		{
+			return $needle;
+		}else{
+			return false;
+		}
+	}
+
 
 	function findAddress($fullAddress){
 
